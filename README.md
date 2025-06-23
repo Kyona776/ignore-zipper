@@ -1,5 +1,8 @@
 # ignore-zipper
 
+[![npm version](https://badge.fury.io/js/ignore-zipper.svg)](https://badge.fury.io/js/ignore-zipper)
+[![GitHub](https://img.shields.io/github/license/Kyona776/ignore-zipper)](https://github.com/Kyona776/ignore-zipper/blob/main/LICENSE)
+
 A CLI tool for creating and extracting ZIP files with support for ignore patterns from `.gitignore`, `.zipignore`, and custom ignore files.
 
 ## Features
@@ -13,14 +16,22 @@ A CLI tool for creating and extracting ZIP files with support for ignore pattern
 
 ## Installation
 
+### Global Installation
+
 ```bash
 npm install -g ignore-zipper
 ```
 
-Or run directly with npx:
+### Run without installing
 
 ```bash
 npx ignore-zipper --help
+```
+
+### Local Project Installation
+
+```bash
+npm install ignore-zipper
 ```
 
 ## Usage
