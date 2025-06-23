@@ -11,6 +11,7 @@ export interface IgnoreRule {
 export class IgnoreParser {
   private rules: IgnoreRule[] = [];
   private basePath: string;
+  private loadedFiles: string[] = [];
 
   constructor(basePath: string) {
     this.basePath = path.resolve(basePath);
@@ -24,6 +25,12 @@ export class IgnoreParser {
     const content = fs.readFileSync(ignoreFilePath, 'utf8');
     const lines = content.split('\n');
 
+    // Track which files we've loaded
+    const fileName = path.basename(ignoreFilePath);
+    if (!this.loadedFiles.includes(fileName)) {
+      this.loadedFiles.push(fileName);
+    }
+
     for (const line of lines) {
       const rule = this.parseIgnoreLine(line);
       if (rule) {
@@ -35,9 +42,33 @@ export class IgnoreParser {
   loadDefaultIgnoreFiles(): void {
     const ignoreFiles = ['.gitignore', '.zipignore', '.ignore'];
     
+    // Load standard ignore files
     for (const ignoreFile of ignoreFiles) {
       const fullPath = path.join(this.basePath, ignoreFile);
       this.loadIgnoreFile(fullPath);
+    }
+
+    // Load all .*ignore files in the directory
+    this.loadStarIgnoreFiles();
+  }
+
+  loadStarIgnoreFiles(): void {
+    try {
+      const files = fs.readdirSync(this.basePath);
+      
+      for (const file of files) {
+        // Match any file that ends with 'ignore' and starts with a dot
+        if (file.match(/^\..*ignore$/)) {
+          // Skip files we already loaded in loadDefaultIgnoreFiles
+          if (!['.gitignore', '.zipignore', '.ignore'].includes(file)) {
+            const fullPath = path.join(this.basePath, file);
+            this.loadIgnoreFile(fullPath);
+          }
+        }
+      }
+    } catch (error) {
+      // Silently fail if we can't read the directory
+      // This might happen due to permissions or if basePath doesn't exist
     }
   }
 
@@ -143,5 +174,26 @@ export class IgnoreParser {
 
   clear(): void {
     this.rules = [];
+    this.loadedFiles = [];
+  }
+
+  getLoadedFiles(): string[] {
+    return [...this.loadedFiles];
+  }
+
+  loadIgnoreFilesByPattern(pattern: string): void {
+    try {
+      const files = fs.readdirSync(this.basePath);
+      
+      for (const file of files) {
+        // Use minimatch for pattern matching
+        if (minimatch(file, pattern, { dot: true })) {
+          const fullPath = path.join(this.basePath, file);
+          this.loadIgnoreFile(fullPath);
+        }
+      }
+    } catch (error) {
+      // Silently fail if we can't read the directory
+    }
   }
 }

@@ -7,12 +7,13 @@ A CLI tool for creating and extracting ZIP files with support for ignore pattern
 
 ## Features
 
-- 🚫 **Ignore File Support**: Automatically respects `.gitignore`, `.zipignore`, and custom ignore files
+- 🚫 **Ignore File Support**: Automatically respects `.gitignore`, `.zipignore`, and all `.*ignore` files
+- 🎯 **Custom Ignore Patterns**: Support for custom ignore file patterns (e.g., `.myignore`, `.buildignore`)
 - 🔄 **Cross-Platform**: Works on Windows, macOS, and Linux
 - 📦 **Multiple Operations**: Create, extract, and list ZIP contents
-- 🎯 **Custom Patterns**: Add custom ignore patterns via CLI
+- 🎛️ **Flexible Options**: Control which ignore files are loaded automatically
 - 📊 **Verbose Mode**: Detailed output for debugging and monitoring
-- 🔍 **Rule Inspection**: View active ignore rules for any directory
+- 🔍 **Rule Inspection**: View active ignore rules and loaded files for any directory
 
 ## Installation
 
@@ -91,6 +92,22 @@ The tool automatically looks for and applies rules from these files:
 - `.gitignore`
 - `.zipignore`
 - `.ignore`
+- Any file matching `.*ignore` pattern (e.g., `.dockerignore`, `.eslintignore`, `.npmignore`, `.buildignore`)
+
+### Custom Ignore File Patterns
+
+You can specify custom patterns for ignore files:
+
+```bash
+# Load files matching a specific pattern
+ignore-zipper create ./project ./output.zip --ignore-pattern ".myignore"
+
+# Load files with multiple patterns 
+ignore-zipper create ./project ./output.zip --ignore-pattern ".*ignore"
+
+# Disable automatic loading of .*ignore files
+ignore-zipper create ./project ./output.zip --no-auto-ignore
+```
 
 ### Supported Ignore Patterns
 
@@ -111,6 +128,8 @@ Create a ZIP file from a source directory.
 - `-c, --compression <level>` - Compression level (0-9, default: 6)
 - `-i, --ignore-file <files...>` - Additional ignore files
 - `-p, --pattern <patterns...>` - Additional ignore patterns
+- `--ignore-pattern <pattern>` - Custom pattern for ignore files (e.g., ".*ignore")
+- `--no-auto-ignore` - Skip automatic loading of .*ignore files
 - `-v, --verbose` - Verbose output
 
 ### `extract <input> <output>`
@@ -132,6 +151,8 @@ Show active ignore rules for a directory.
 **Options:**
 - `-i, --ignore-file <files...>` - Additional ignore files
 - `-p, --pattern <patterns...>` - Additional ignore patterns
+- `--ignore-pattern <pattern>` - Custom pattern for ignore files (e.g., ".*ignore")
+- `--no-auto-ignore` - Skip automatic loading of .*ignore files
 
 ## Examples
 
@@ -146,8 +167,25 @@ echo "node_modules/
 dist/
 coverage/" > .zipignore
 
-# Create ZIP
+# Create ZIP (automatically loads .gitignore, .zipignore, and all .*ignore files)
 ignore-zipper create ./my-app ./releases/my-app-v1.0.0.zip -v
+```
+
+### Use custom ignore file patterns
+
+```bash
+# Create custom ignore files
+echo "*.tmp\ncache/" > .buildignore
+echo "docs/\nexamples/" > .deployignore
+
+# Load only specific ignore file pattern
+ignore-zipper create ./project ./output.zip --ignore-pattern ".buildignore" -v
+
+# Load all files ending with 'ignore' except standard ones
+ignore-zipper create ./project ./output.zip --ignore-pattern "*ignore" -v
+
+# Skip automatic .*ignore loading and use only .gitignore
+ignore-zipper create ./project ./output.zip --no-auto-ignore -v
 ```
 
 ### Extract with safety checks
@@ -163,11 +201,17 @@ ignore-zipper extract ./archive.zip ./extracted/ -f
 ### Debug ignore rules
 
 ```bash
-# See what rules are active
+# See what rules are active (shows loaded ignore files)
 ignore-zipper rules ./my-project
+
+# Test with custom ignore file patterns
+ignore-zipper rules ./my-project --ignore-pattern ".buildignore"
 
 # Test with additional patterns
 ignore-zipper rules ./my-project -p "*.tmp" "cache/"
+
+# See what rules would be active without auto-loading .*ignore files
+ignore-zipper rules ./my-project --no-auto-ignore
 ```
 
 ## API Usage
@@ -179,10 +223,12 @@ import { Zipper, IgnoreParser } from 'ignore-zipper';
 
 const zipper = new Zipper('./my-project');
 
-// Create ZIP with options
+// Create ZIP with custom ignore options
 await zipper.createZip('./my-project', './output.zip', {
   compressionLevel: 9,
   customPatterns: ['*.tmp', 'cache/'],
+  ignorePattern: '.buildignore',  // Load custom ignore file pattern
+  autoIgnore: false,              // Skip automatic .*ignore files
   verbose: true
 });
 
@@ -195,6 +241,13 @@ await zipper.extractZip('./archive.zip', './output/', {
 // List contents
 const files = await zipper.listZipContents('./archive.zip');
 console.log(files);
+
+// Inspect ignore rules
+const ignoreParser = zipper.getIgnoreParser();
+const loadedFiles = ignoreParser.getLoadedFiles();
+const rules = ignoreParser.getRules();
+console.log('Loaded ignore files:', loadedFiles);
+console.log('Active rules:', rules);
 ```
 
 ## Security

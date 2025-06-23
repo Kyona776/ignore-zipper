@@ -11,7 +11,7 @@ const program = new Command();
 program
   .name('ignore-zipper')
   .description('CLI tool for zip operations with ignore file support')
-  .version('1.0.0');
+  .version('0.0.2');
 
 program
   .command('create')
@@ -21,6 +21,8 @@ program
   .option('-c, --compression <level>', 'Compression level (0-9)', '6')
   .option('-i, --ignore-file <files...>', 'Additional ignore files to use')
   .option('-p, --pattern <patterns...>', 'Additional ignore patterns')
+  .option('--ignore-pattern <pattern>', 'Custom pattern for ignore files (e.g., ".*ignore" or ".myignore")')
+  .option('--no-auto-ignore', 'Skip automatic loading of .*ignore files')
   .option('-v, --verbose', 'Verbose output')
   .action(async (source: string, output: string, options) => {
     try {
@@ -56,6 +58,8 @@ program
         compressionLevel: parseInt(options.compression),
         ignoreFiles: options.ignoreFile || [],
         customPatterns: options.pattern || [],
+        ignorePattern: options.ignorePattern,
+        autoIgnore: options.autoIgnore,
         verbose: options.verbose
       });
 
@@ -141,6 +145,8 @@ program
   .argument('<directory>', 'Directory to analyze')
   .option('-i, --ignore-file <files...>', 'Additional ignore files to use')
   .option('-p, --pattern <patterns...>', 'Additional ignore patterns')
+  .option('--ignore-pattern <pattern>', 'Custom pattern for ignore files (e.g., ".*ignore" or ".myignore")')
+  .option('--no-auto-ignore', 'Skip automatic loading of .*ignore files')
   .action((directory: string, options) => {
     try {
       const dirPath = path.resolve(directory);
@@ -153,8 +159,22 @@ program
       const zipper = new Zipper(dirPath);
       const ignoreParser = zipper.getIgnoreParser();
       
-      // Load ignore files
-      ignoreParser.loadDefaultIgnoreFiles();
+      // Load ignore files based on options
+      if (options.autoIgnore !== false) {
+        ignoreParser.loadDefaultIgnoreFiles();
+      } else {
+        // Load only standard ignore files if auto-ignore is disabled
+        const standardFiles = ['.gitignore', '.zipignore', '.ignore'];
+        for (const ignoreFile of standardFiles) {
+          const fullPath = path.join(dirPath, ignoreFile);
+          ignoreParser.loadIgnoreFile(fullPath);
+        }
+      }
+
+      // Load files matching custom ignore pattern
+      if (options.ignorePattern) {
+        ignoreParser.loadIgnoreFilesByPattern(options.ignorePattern);
+      }
       
       if (options.ignoreFile) {
         for (const ignoreFile of options.ignoreFile) {
@@ -169,9 +189,16 @@ program
       }
 
       const rules = ignoreParser.getRules();
+      const loadedFiles = ignoreParser.getLoadedFiles();
       
       console.log(chalk.blue(`Ignore rules for: ${dirPath}`));
       console.log(chalk.gray('─'.repeat(50)));
+      
+      // Show loaded ignore files
+      if (loadedFiles.length > 0) {
+        console.log(chalk.cyan(`📁 Loaded ignore files: ${loadedFiles.join(', ')}`));
+        console.log(chalk.gray('─'.repeat(50)));
+      }
       
       if (rules.length === 0) {
         console.log(chalk.yellow('No ignore rules found'));

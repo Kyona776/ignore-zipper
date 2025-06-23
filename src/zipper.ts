@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import archiver from 'archiver';
 import yauzl from 'yauzl';
+import chalk from 'chalk';
 import { IgnoreParser } from './ignore-parser';
 import { FileTraversal } from './file-traversal';
 
@@ -9,6 +10,8 @@ export interface ZipOptions {
   compressionLevel?: number;
   ignoreFiles?: string[];
   customPatterns?: string[];
+  ignorePattern?: string;
+  autoIgnore?: boolean;
   verbose?: boolean;
 }
 
@@ -31,11 +34,27 @@ export class Zipper {
       compressionLevel = 6,
       ignoreFiles = [],
       customPatterns = [],
+      ignorePattern,
+      autoIgnore = true,
       verbose = false
     } = options;
 
-    // Load ignore files
-    this.ignoreParser.loadDefaultIgnoreFiles();
+    // Load ignore files based on options
+    if (autoIgnore) {
+      this.ignoreParser.loadDefaultIgnoreFiles();
+    } else {
+      // Load only standard ignore files if auto-ignore is disabled
+      const standardFiles = ['.gitignore', '.zipignore', '.ignore'];
+      for (const ignoreFile of standardFiles) {
+        const fullPath = path.join(sourcePath, ignoreFile);
+        this.ignoreParser.loadIgnoreFile(fullPath);
+      }
+    }
+
+    // Load files matching custom ignore pattern
+    if (ignorePattern) {
+      this.ignoreParser.loadIgnoreFilesByPattern(ignorePattern);
+    }
     
     // Load custom ignore files
     for (const ignoreFile of ignoreFiles) {
@@ -45,6 +64,13 @@ export class Zipper {
     // Add custom patterns
     for (const pattern of customPatterns) {
       this.ignoreParser.addPattern(pattern);
+    }
+
+    if (verbose) {
+      const loadedFiles = this.ignoreParser.getLoadedFiles();
+      if (loadedFiles.length > 0) {
+        console.log(chalk.gray(`Loaded ignore files: ${loadedFiles.join(', ')}`));
+      }
     }
 
     // Create the archive

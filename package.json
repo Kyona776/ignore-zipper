@@ -1,6 +1,6 @@
 {
   "name": "ignore-zipper",
-  "version": "1.0.0",
+  "version": "0.0.2",
   "description": "CLI tool for zip operations with ignore file support",
   "main": "dist/index.js",
   "bin": {
