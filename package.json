@@ -12,10 +12,24 @@
     "start": "node dist/cli.js",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm run typecheck"
   },
-  "keywords": ["zip", "ignore", "cli", "gitignore"],
-  "author": "",
+  "keywords": ["zip", "ignore", "cli", "gitignore", "archive", "compression", "zipignore", "file-management"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "author": "Kyona776",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kyona776/ignore-zipper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Kyona776/ignore-zipper/issues"
+  },
+  "homepage": "https://github.com/Kyona776/ignore-zipper#readme",
   "license": "MIT",
   "dependencies": {
     "commander": "^11.1.0",
